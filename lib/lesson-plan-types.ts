@@ -1,5 +1,12 @@
 // Lesson Plan Generator Types
 
+export type PreviousKnowledgeLevel =
+  | 'no-prior-knowledge'
+  | 'limited-familiarity'
+  | 'basic-understanding'
+  | 'moderate-understanding'
+  | 'strong-understanding';
+
 export interface LessonParameters {
   board: string;
   grade: string;
@@ -7,6 +14,11 @@ export interface LessonParameters {
   selectionType: 'chapter' | 'topic';
   chapter: string;
   subTopic: string;
+  // Class Readiness
+  previousKnowledge: PreviousKnowledgeLevel;
+  previousKnowledgeNotes: string;
+  missingCompetencies: string[];
+  // Duration and other settings
   duration: number;
   classStrength: number;
   includeQuiz: boolean;
