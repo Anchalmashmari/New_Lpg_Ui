@@ -40,11 +40,11 @@ const previousKnowledgeLevels: { value: PreviousKnowledgeLevel; label: string }[
   { value: 'strong-understanding', label: 'Strong understanding' },
 ];
 
-const nextSessionRecommendations: { value: NextSessionRecommendation; label: string }[] = [
-  { value: 'reteach', label: 'Reteach' },
-  { value: 'reinforce', label: 'Reinforce' },
-  { value: 'continue-sequence', label: 'Continue Sequence' },
-  { value: 'enrichment', label: 'Enrichment' },
+const nextSessionRecommendations: { value: NextSessionRecommendation; label: string; description: string }[] = [
+  { value: 'reteach', label: 'Reteach', description: 'Start over and teach the concept again from the beginning' },
+  { value: 'reinforce', label: 'Reinforce', description: 'Strengthen the concept students mostly know, but have not mastered' },
+  { value: 'continue-sequence', label: 'Continue', description: 'Move to the next session as planned' },
+  { value: 'enrichment', label: 'Enrich', description: 'Go beyond the current level into deeper or higher-order work' },
 ];
 
 // Required Previous Knowledge competencies (recommendations based on subject/chapter)
@@ -943,8 +943,11 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
                     </SelectTrigger>
                     <SelectContent>
                       {nextSessionRecommendations.map((rec) => (
-                        <SelectItem key={rec.value} value={rec.value}>
-                          {rec.label}
+                        <SelectItem key={rec.value} value={rec.value} className="py-2">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-medium">{rec.label}</span>
+                            <span className="text-xs text-muted-foreground">{rec.description}</span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
