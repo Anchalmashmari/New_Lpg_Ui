@@ -807,77 +807,7 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
                 </div>
               </div>
 
-              {/* Right: Instructor Assessment & Recommendation Dropdowns */}
-              <div className="space-y-4">
-                <Label className="text-sm font-medium">Instructor Assessment of Overall Previous Knowledge Competency</Label>
-                
-                {/* Flex row with two dropdowns */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  {/* Knowledge Level Dropdown */}
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor="previousKnowledge" className="text-xs text-muted-foreground">
-                      Knowledge Level
-                    </Label>
-                    <Select
-                      value={formData.previousKnowledge}
-                      onValueChange={(value: PreviousKnowledgeLevel) =>
-                        setFormData({ ...formData, previousKnowledge: value })
-                      }
-                    >
-                      <SelectTrigger id="previousKnowledge" className="bg-card">
-                        <SelectValue placeholder="Select level" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {previousKnowledgeLevels.map((level) => (
-                          <SelectItem key={level.value} value={level.value}>
-                            {level.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Next Session Recommendation Dropdown */}
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor="nextSessionRecommendation" className="text-xs text-muted-foreground">
-                      Next-Session Recommendation
-                    </Label>
-                    <Select
-                      value={formData.nextSessionRecommendation}
-                      onValueChange={(value: NextSessionRecommendation) =>
-                        setFormData({ ...formData, nextSessionRecommendation: value })
-                      }
-                    >
-                      <SelectTrigger id="nextSessionRecommendation" className="bg-card">
-                        <SelectValue placeholder="Select recommendation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {nextSessionRecommendations.map((rec) => (
-                          <SelectItem key={rec.value} value={rec.value}>
-                            {rec.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Previous Knowledge Notes */}
-                <div className="space-y-2">
-                  <Label htmlFor="previousKnowledgeNotes" className="text-xs text-muted-foreground">
-                    Notes (Optional)
-                  </Label>
-                  <Textarea
-                    id="previousKnowledgeNotes"
-                    value={formData.previousKnowledgeNotes}
-                    onChange={(e) => setFormData({ ...formData, previousKnowledgeNotes: e.target.value })}
-                    placeholder="Observations about readiness..."
-                    className="bg-card resize-none text-sm"
-                    rows={2}
-                  />
-                </div>
               </div>
-            </div>
 
             {/* Missing Competencies */}
             <div className="space-y-3">
@@ -955,6 +885,71 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
+              </div>
+            </div>
+
+            {/* Horizontal Divider */}
+            <div className="flex items-center gap-4 py-2">
+              <div className="flex-1 border-t border-border" />
+              <span className="text-xs text-muted-foreground font-medium">OR</span>
+              <div className="flex-1 border-t border-border" />
+            </div>
+
+            {/* Instructor Assessment of Overall Previous Knowledge Competency */}
+            <div className="space-y-4">
+              <Label className="text-sm font-medium">
+                Instructor Assessment of Overall Previous Knowledge Competency
+              </Label>
+              
+              {/* Flex row with two dropdowns */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Knowledge Level Dropdown */}
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="previousKnowledge" className="text-xs text-muted-foreground">
+                    Knowledge Level
+                  </Label>
+                  <Select
+                    value={formData.previousKnowledge}
+                    onValueChange={(value: PreviousKnowledgeLevel) =>
+                      setFormData({ ...formData, previousKnowledge: value })
+                    }
+                  >
+                    <SelectTrigger id="previousKnowledge" className="bg-card">
+                      <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {previousKnowledgeLevels.map((level) => (
+                        <SelectItem key={level.value} value={level.value}>
+                          {level.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Next Session Recommendation Dropdown */}
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="nextSessionRecommendation" className="text-xs text-muted-foreground">
+                    Next-Session Recommendation
+                  </Label>
+                  <Select
+                    value={formData.nextSessionRecommendation}
+                    onValueChange={(value: NextSessionRecommendation) =>
+                      setFormData({ ...formData, nextSessionRecommendation: value })
+                    }
+                  >
+                    <SelectTrigger id="nextSessionRecommendation" className="bg-card">
+                      <SelectValue placeholder="Select recommendation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {nextSessionRecommendations.map((rec) => (
+                        <SelectItem key={rec.value} value={rec.value}>
+                          {rec.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </div>
