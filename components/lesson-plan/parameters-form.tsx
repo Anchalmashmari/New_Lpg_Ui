@@ -8,13 +8,17 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { ArrowRight, BookOpen, GraduationCap, Clock, Users, FileText, Lightbulb, BarChart3, Brain, AlertTriangle, Plus, X } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, Clock, Users, FileText, Lightbulb, BarChart3, Brain, AlertTriangle, Plus, X, CheckCircle2, Target, Lock } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import type { LessonParameters, PreviousKnowledgeLevel } from '@/lib/lesson-plan-types';
 
+// Teacher proficiency levels for RBAC control
+type TeacherProficiency = 'beginner' | 'intermediate' | 'advanced' | 'expert';
+
 interface ParametersFormProps {
   onSubmit: (params: LessonParameters) => void;
+  teacherProficiency?: TeacherProficiency; // Controls edit access for PK
 }
 
 const boards = ['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge'];
@@ -35,6 +39,56 @@ const previousKnowledgeLevels: { value: PreviousKnowledgeLevel; label: string }[
   { value: 'moderate-understanding', label: 'Moderate understanding' },
   { value: 'strong-understanding', label: 'Strong understanding' },
 ];
+
+// Required Previous Knowledge competencies (recommendations based on subject/chapter)
+const requiredPKMap: Record<string, Record<string, string[]>> = {
+  Science: {
+    '1': ['Basic observation skills', 'Curiosity about surroundings'],
+    '2': ['Understanding of living vs non-living', 'Basic classification skills', 'Simple vocabulary for describing objects'],
+    '3': ['Knowledge of basic scientific method', 'Understanding of measurements', 'Ability to record observations'],
+    '4': ['Understanding of variables in experiments', 'Data interpretation basics', 'Scientific reasoning skills'],
+    '5': ['Critical thinking abilities', 'Research skills', 'Ability to synthesize information'],
+  },
+  Mathematics: {
+    '1': ['Number recognition 1-20', 'Basic counting skills', 'Shape recognition'],
+    '2': ['Single digit addition/subtraction', 'Place value understanding', 'Basic measurement concepts'],
+    '3': ['Multiplication tables up to 5', 'Fraction concepts', 'Basic geometry knowledge'],
+    '4': ['Multi-digit operations', 'Decimal understanding', 'Basic algebraic thinking'],
+    '5': ['Equation solving', 'Geometric proofs basics', 'Statistical concepts'],
+  },
+  English: {
+    '1': ['Alphabet recognition', 'Basic phonics', 'Simple word reading'],
+    '2': ['Sentence reading fluency', 'Basic punctuation knowledge', 'Paragraph comprehension'],
+    '3': ['Text structure understanding', 'Vocabulary building', 'Writing coherent paragraphs'],
+    '4': ['Literary analysis basics', 'Essay structure knowledge', 'Research skills'],
+    '5': ['Critical reading skills', 'Advanced composition', 'Source evaluation'],
+  },
+};
+
+// Achieved Previous Knowledge competencies (what students have mastered)
+const achievedPKMap: Record<string, Record<string, string[]>> = {
+  Science: {
+    '1': ['Can name common objects', 'Shows interest in nature'],
+    '2': ['Identifies plants and animals', 'Describes object properties', 'Uses science vocabulary'],
+    '3': ['Conducts guided experiments', 'Records observations', 'Makes predictions'],
+    '4': ['Designs simple experiments', 'Analyzes basic data', 'Explains scientific concepts'],
+    '5': ['Evaluates scientific claims', 'Synthesizes information', 'Communicates findings'],
+  },
+  Mathematics: {
+    '1': ['Counts to 100', 'Identifies shapes', 'Compares quantities'],
+    '2': ['Adds and subtracts within 20', 'Understands place value', 'Reads simple graphs'],
+    '3': ['Multiplies and divides', 'Works with fractions', 'Calculates perimeter'],
+    '4': ['Solves multi-step problems', 'Uses algebraic expressions', 'Analyzes data'],
+    '5': ['Solves equations', 'Proves theorems', 'Applies problem-solving strategies'],
+  },
+  English: {
+    '1': ['Recognizes all letters', 'Reads simple words', 'Writes name'],
+    '2': ['Reads fluently', 'Uses punctuation', 'Writes paragraphs'],
+    '3': ['Analyzes text structure', 'Uses varied vocabulary', 'Edits own work'],
+    '4': ['Writes persuasive essays', 'Conducts research', 'Debates effectively'],
+    '5': ['Analyzes literature critically', 'Writes sophisticated compositions', 'Evaluates sources'],
+  },
+};
 
 // Competencies mapped by subject and chapter - dynamically populated based on selections
 const competenciesMap: Record<string, Record<string, string[]>> = {
@@ -262,7 +316,10 @@ const competenciesMap: Record<string, Record<string, string[]>> = {
   },
 };
 
-export function ParametersForm({ onSubmit }: ParametersFormProps) {
+export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }: ParametersFormProps) {
+  // RBAC: Only advanced and expert teachers can edit Previous Knowledge
+  const canEditPK = teacherProficiency === 'advanced' || teacherProficiency === 'expert';
+
   const [formData, setFormData] = useState<LessonParameters>({
     board: 'CBSE',
     grade: '3',
@@ -285,12 +342,33 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
   // State for custom competency input
   const [newCustomCompetency, setNewCustomCompetency] = useState('');
   const [customCompetencies, setCustomCompetencies] = useState<string[]>([]);
+  
+  // State for custom PK competency inputs
+  const [newRequiredPK, setNewRequiredPK] = useState('');
+  const [newAchievedPK, setNewAchievedPK] = useState('');
+  const [customRequiredPK, setCustomRequiredPK] = useState<string[]>([]);
+  const [customAchievedPK, setCustomAchievedPK] = useState<string[]>([]);
 
   // Get available competencies based on current subject and chapter
   const availableCompetencies =
     competenciesMap[formData.subject]?.[formData.chapter] ||
     competenciesMap[formData.subject]?.['1'] ||
     [];
+
+  // Get recommended PK competencies based on subject and chapter
+  const recommendedRequiredPK =
+    requiredPKMap[formData.subject]?.[formData.chapter] ||
+    requiredPKMap[formData.subject]?.['1'] ||
+    [];
+
+  const recommendedAchievedPK =
+    achievedPKMap[formData.subject]?.[formData.chapter] ||
+    achievedPKMap[formData.subject]?.['1'] ||
+    [];
+
+  // Combined PK lists (recommended + custom)
+  const allRequiredPK = [...recommendedRequiredPK, ...customRequiredPK];
+  const allAchievedPK = [...recommendedAchievedPK, ...customAchievedPK];
 
   // Handle competency toggle
   const handleCompetencyToggle = (competency: string) => {
@@ -321,6 +399,66 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
 
   // Combined competencies list (predefined + custom)
   const allCompetencies = [...availableCompetencies, ...customCompetencies];
+
+  // Handle Required PK toggle
+  const handleRequiredPKToggle = (competency: string) => {
+    if (!canEditPK) return;
+    setFormData((prev) => ({
+      ...prev,
+      requiredCompetencies: prev.requiredCompetencies.includes(competency)
+        ? prev.requiredCompetencies.filter((c) => c !== competency)
+        : [...prev.requiredCompetencies, competency],
+    }));
+  };
+
+  // Handle Achieved PK toggle
+  const handleAchievedPKToggle = (competency: string) => {
+    if (!canEditPK) return;
+    setFormData((prev) => ({
+      ...prev,
+      achievedCompetencies: prev.achievedCompetencies.includes(competency)
+        ? prev.achievedCompetencies.filter((c) => c !== competency)
+        : [...prev.achievedCompetencies, competency],
+    }));
+  };
+
+  // Add custom Required PK
+  const handleAddRequiredPK = () => {
+    if (!canEditPK) return;
+    if (newRequiredPK.trim() && !customRequiredPK.includes(newRequiredPK.trim())) {
+      setCustomRequiredPK((prev) => [...prev, newRequiredPK.trim()]);
+      setNewRequiredPK('');
+    }
+  };
+
+  // Remove custom Required PK
+  const handleRemoveRequiredPK = (competency: string) => {
+    if (!canEditPK) return;
+    setCustomRequiredPK((prev) => prev.filter((c) => c !== competency));
+    setFormData((prev) => ({
+      ...prev,
+      requiredCompetencies: prev.requiredCompetencies.filter((c) => c !== competency),
+    }));
+  };
+
+  // Add custom Achieved PK
+  const handleAddAchievedPK = () => {
+    if (!canEditPK) return;
+    if (newAchievedPK.trim() && !customAchievedPK.includes(newAchievedPK.trim())) {
+      setCustomAchievedPK((prev) => [...prev, newAchievedPK.trim()]);
+      setNewAchievedPK('');
+    }
+  };
+
+  // Remove custom Achieved PK
+  const handleRemoveAchievedPK = (competency: string) => {
+    if (!canEditPK) return;
+    setCustomAchievedPK((prev) => prev.filter((c) => c !== competency));
+    setFormData((prev) => ({
+      ...prev,
+      achievedCompetencies: prev.achievedCompetencies.filter((c) => c !== competency),
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -490,48 +628,217 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
 
           {/* Class Readiness Section */}
           <div className="space-y-4 rounded-lg border border-border p-4 bg-muted/30">
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-primary" />
-              <span className="font-medium text-base">Class Readiness</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary" />
+                <span className="font-medium text-base">Class Readiness</span>
+              </div>
+              {!canEditPK && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                  <Lock className="h-3 w-3" />
+                  <span>PK editing requires advanced access</span>
+                </div>
+              )}
             </div>
 
-            {/* Previous Knowledge Level Dropdown */}
-            <div className="space-y-2">
-              <Label htmlFor="previousKnowledge" className="text-sm font-medium">
-                Previous Knowledge Level
-              </Label>
-              <Select
-                value={formData.previousKnowledge}
-                onValueChange={(value: PreviousKnowledgeLevel) =>
-                  setFormData({ ...formData, previousKnowledge: value })
-                }
-              >
-                <SelectTrigger id="previousKnowledge" className="bg-card">
-                  <SelectValue placeholder="Select knowledge level" />
-                </SelectTrigger>
-                <SelectContent>
-                  {previousKnowledgeLevels.map((level) => (
-                    <SelectItem key={level.value} value={level.value}>
-                      {level.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Previous Knowledge Section - Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Left: Previous Knowledge Competencies (Required & Achieved) */}
+              <div className="lg:col-span-2 space-y-4">
+                <Label className="text-sm font-medium">Previous Knowledge Competencies</Label>
+                
+                {/* Two columns for Required and Achieved */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Required PK */}
+                  <div className="space-y-3 rounded-md border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 p-3">
+                    <Label className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400">
+                      <Target className="h-4 w-4" />
+                      Required PK
+                    </Label>
+                    
+                    {allRequiredPK.length > 0 ? (
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {allRequiredPK.map((competency, index) => {
+                          const isCustom = customRequiredPK.includes(competency);
+                          return (
+                            <div key={index} className="flex items-start gap-2">
+                              <Checkbox
+                                id={`required-pk-${index}`}
+                                checked={formData.requiredCompetencies.includes(competency)}
+                                onCheckedChange={() => handleRequiredPKToggle(competency)}
+                                disabled={!canEditPK}
+                                className="mt-0.5"
+                              />
+                              <Label
+                                htmlFor={`required-pk-${index}`}
+                                className={`text-xs font-normal leading-relaxed flex-1 ${!canEditPK ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                              >
+                                {competency}
+                              </Label>
+                              {isCustom && canEditPK && (
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-4 w-4 shrink-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() => handleRemoveRequiredPK(competency)}
+                                >
+                                  <X className="h-2.5 w-2.5" />
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">No recommendations available</p>
+                    )}
+                    
+                    {/* Add custom Required PK */}
+                    {canEditPK && (
+                      <div className="flex gap-1.5 pt-1">
+                        <Input
+                          value={newRequiredPK}
+                          onChange={(e) => setNewRequiredPK(e.target.value)}
+                          placeholder="Add required..."
+                          className="bg-card flex-1 text-xs h-7"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddRequiredPK();
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          className="h-7 w-7"
+                          onClick={handleAddRequiredPK}
+                          disabled={!newRequiredPK.trim()}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
 
-            {/* Previous Knowledge Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="previousKnowledgeNotes" className="text-sm font-medium text-muted-foreground">
-                Additional Notes (Optional)
-              </Label>
-              <Textarea
-                id="previousKnowledgeNotes"
-                value={formData.previousKnowledgeNotes}
-                onChange={(e) => setFormData({ ...formData, previousKnowledgeNotes: e.target.value })}
-                placeholder="Any specific observations about student readiness..."
-                className="bg-card resize-none"
-                rows={2}
-              />
+                  {/* Achieved PK */}
+                  <div className="space-y-3 rounded-md border border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20 p-3">
+                    <Label className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Achieved PK
+                    </Label>
+                    
+                    {allAchievedPK.length > 0 ? (
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {allAchievedPK.map((competency, index) => {
+                          const isCustom = customAchievedPK.includes(competency);
+                          return (
+                            <div key={index} className="flex items-start gap-2">
+                              <Checkbox
+                                id={`achieved-pk-${index}`}
+                                checked={formData.achievedCompetencies.includes(competency)}
+                                onCheckedChange={() => handleAchievedPKToggle(competency)}
+                                disabled={!canEditPK}
+                                className="mt-0.5"
+                              />
+                              <Label
+                                htmlFor={`achieved-pk-${index}`}
+                                className={`text-xs font-normal leading-relaxed flex-1 ${!canEditPK ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                              >
+                                {competency}
+                              </Label>
+                              {isCustom && canEditPK && (
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-4 w-4 shrink-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() => handleRemoveAchievedPK(competency)}
+                                >
+                                  <X className="h-2.5 w-2.5" />
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">No recommendations available</p>
+                    )}
+                    
+                    {/* Add custom Achieved PK */}
+                    {canEditPK && (
+                      <div className="flex gap-1.5 pt-1">
+                        <Input
+                          value={newAchievedPK}
+                          onChange={(e) => setNewAchievedPK(e.target.value)}
+                          placeholder="Add achieved..."
+                          className="bg-card flex-1 text-xs h-7"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddAchievedPK();
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          className="h-7 w-7"
+                          onClick={handleAddAchievedPK}
+                          disabled={!newAchievedPK.trim()}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Previous Knowledge Level Dropdown */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="previousKnowledge" className="text-sm font-medium">
+                    Knowledge Level
+                  </Label>
+                  <Select
+                    value={formData.previousKnowledge}
+                    onValueChange={(value: PreviousKnowledgeLevel) =>
+                      setFormData({ ...formData, previousKnowledge: value })
+                    }
+                  >
+                    <SelectTrigger id="previousKnowledge" className="bg-card">
+                      <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {previousKnowledgeLevels.map((level) => (
+                        <SelectItem key={level.value} value={level.value}>
+                          {level.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Previous Knowledge Notes */}
+                <div className="space-y-2">
+                  <Label htmlFor="previousKnowledgeNotes" className="text-sm font-medium text-muted-foreground">
+                    Notes (Optional)
+                  </Label>
+                  <Textarea
+                    id="previousKnowledgeNotes"
+                    value={formData.previousKnowledgeNotes}
+                    onChange={(e) => setFormData({ ...formData, previousKnowledgeNotes: e.target.value })}
+                    placeholder="Observations about readiness..."
+                    className="bg-card resize-none text-sm"
+                    rows={3}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Missing Competencies */}
