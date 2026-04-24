@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { ArrowRight, BookOpen, GraduationCap, Clock, Users, FileText, Lightbulb, BarChart3, Brain, AlertTriangle, Plus, X, CheckCircle2, Target, Lock } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, Clock, Users, FileText, Lightbulb, BarChart3, Brain, AlertTriangle, Plus, X, CheckCircle2, Target, Lock, Calendar, Hash } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import type { LessonParameters, PreviousKnowledgeLevel, NextSessionRecommendation } from '@/lib/lesson-plan-types';
+import type { LessonParameters, PreviousKnowledgeLevel, NextSessionRecommendation, SessionType } from '@/lib/lesson-plan-types';
 
 // Teacher proficiency levels for RBAC control
 type TeacherProficiency = 'beginner' | 'intermediate' | 'advanced' | 'expert';
@@ -45,6 +45,29 @@ const nextSessionRecommendations: { value: NextSessionRecommendation; label: str
   { value: 'reinforce', label: 'Reinforce', description: 'Strengthen the concept students mostly know, but have not mastered' },
   { value: 'continue-sequence', label: 'Continue', description: 'Move to the next session as planned' },
   { value: 'enrichment', label: 'Enrich', description: 'Go beyond the current level into deeper or higher-order work' },
+];
+
+// Session Context options
+const cohorts = [
+  { id: 'grade-3-a', name: 'Grade 3 - A' },
+  { id: 'grade-3-b', name: 'Grade 3 - B' },
+  { id: 'grade-3-c', name: 'Grade 3 - C' },
+  { id: 'grade-4-a', name: 'Grade 4 - A' },
+  { id: 'grade-4-b', name: 'Grade 4 - B' },
+  { id: 'grade-5-a', name: 'Grade 5 - A' },
+];
+
+const semesters = [
+  { id: 'semester-1', name: 'Semester 1' },
+  { id: 'semester-2', name: 'Semester 2' },
+  { id: 'term-1', name: 'Term 1' },
+  { id: 'term-2', name: 'Term 2' },
+];
+
+const sessionTypes: { value: SessionType; label: string }[] = [
+  { value: 'regular', label: 'Regular Curricular Session' },
+  { value: 'remedial', label: 'Remedial Class' },
+  { value: 'revision', label: 'Revision Class' },
 ];
 
 // Required Previous Knowledge competencies (recommendations based on subject/chapter)
@@ -334,6 +357,10 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
     selectionType: 'chapter',
     chapter: '2',
     subTopic: '',
+    cohort: '',
+    semester: '',
+    sessionNumber: 1,
+    sessionType: 'regular',
     previousKnowledge: 'basic-understanding',
     nextSessionRecommendation: 'continue-sequence',
     previousKnowledgeNotes: '',
@@ -346,6 +373,14 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
     includeAssignment: false,
     outputStyle: 'detailed',
   });
+
+  // Validation state for Session Context
+  const [validationErrors, setValidationErrors] = useState<{
+    cohort?: string;
+    semester?: string;
+    sessionNumber?: string;
+    sessionType?: string;
+  }>({});
 
   // State for custom competency input
   const [newCustomCompetency, setNewCustomCompetency] = useState('');
@@ -470,6 +505,20 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate Session Context fields
+    const errors: typeof validationErrors = {};
+    if (!formData.cohort) errors.cohort = 'Cohort is required';
+    if (!formData.semester) errors.semester = 'Semester is required';
+    if (!formData.sessionNumber || formData.sessionNumber < 1) errors.sessionNumber = 'Session number must be greater than 0';
+    if (!formData.sessionType) errors.sessionType = 'Session type is required';
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors({});
     onSubmit(formData);
   };
 
@@ -633,6 +682,135 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
               />
             </div>
           )}
+
+          {/* Session Context Section */}
+          <div className="space-y-4 rounded-lg border border-border p-4 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              <span className="font-medium text-base">Session Context</span>
+            </div>
+
+            {/* Cohort and Semester Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Cohort */}
+              <div className="space-y-2">
+                <Label htmlFor="cohort" className="text-sm font-medium">
+                  Select Cohort <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.cohort}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, cohort: value });
+                    if (validationErrors.cohort) {
+                      setValidationErrors((prev) => ({ ...prev, cohort: undefined }));
+                    }
+                  }}
+                >
+                  <SelectTrigger id="cohort" className={`bg-card ${validationErrors.cohort ? 'border-destructive' : ''}`}>
+                    <SelectValue placeholder="Choose class / section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cohorts.map((cohort) => (
+                      <SelectItem key={cohort.id} value={cohort.id}>
+                        {cohort.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {validationErrors.cohort && (
+                  <p className="text-xs text-destructive">{validationErrors.cohort}</p>
+                )}
+              </div>
+
+              {/* Semester */}
+              <div className="space-y-2">
+                <Label htmlFor="semester" className="text-sm font-medium">
+                  Select Semester <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.semester}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, semester: value });
+                    if (validationErrors.semester) {
+                      setValidationErrors((prev) => ({ ...prev, semester: undefined }));
+                    }
+                  }}
+                >
+                  <SelectTrigger id="semester" className={`bg-card ${validationErrors.semester ? 'border-destructive' : ''}`}>
+                    <SelectValue placeholder="Choose semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {semesters.map((sem) => (
+                      <SelectItem key={sem.id} value={sem.id}>
+                        {sem.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {validationErrors.semester && (
+                  <p className="text-xs text-destructive">{validationErrors.semester}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Session Number */}
+            <div className="space-y-2">
+              <Label htmlFor="sessionNumber" className="flex items-center gap-2 text-sm font-medium">
+                <Hash className="h-4 w-4 text-muted-foreground" />
+                Session Number <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="sessionNumber"
+                type="number"
+                min={1}
+                value={formData.sessionNumber}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  setFormData({ ...formData, sessionNumber: value });
+                  if (validationErrors.sessionNumber && value >= 1) {
+                    setValidationErrors((prev) => ({ ...prev, sessionNumber: undefined }));
+                  }
+                }}
+                placeholder="e.g. 4"
+                className={`bg-card max-w-32 ${validationErrors.sessionNumber ? 'border-destructive' : ''}`}
+              />
+              {validationErrors.sessionNumber && (
+                <p className="text-xs text-destructive">{validationErrors.sessionNumber}</p>
+              )}
+            </div>
+
+            {/* Session Type */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">
+                Session Type <span className="text-destructive">*</span>
+              </Label>
+              <RadioGroup
+                value={formData.sessionType}
+                onValueChange={(value: SessionType) => {
+                  setFormData({ ...formData, sessionType: value });
+                  if (validationErrors.sessionType) {
+                    setValidationErrors((prev) => ({ ...prev, sessionType: undefined }));
+                  }
+                }}
+                className="flex flex-wrap gap-4"
+              >
+                {sessionTypes.map((type) => (
+                  <div key={type.value} className="flex items-center space-x-2">
+                    <RadioGroupItem value={type.value} id={`session-${type.value}`} />
+                    <Label htmlFor={`session-${type.value}`} className="font-normal cursor-pointer">
+                      {type.label}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              {validationErrors.sessionType && (
+                <p className="text-xs text-destructive">{validationErrors.sessionType}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Choose whether this session follows the regular curriculum or is intended for reteaching/revision.
+              </p>
+            </div>
+          </div>
 
           {/* Class Readiness Section */}
           <div className="space-y-4 rounded-lg border border-border p-4 bg-muted/30">

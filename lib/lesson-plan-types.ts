@@ -13,6 +13,8 @@ export type NextSessionRecommendation =
   | 'continue-sequence'
   | 'enrichment';
 
+export type SessionType = 'regular' | 'remedial' | 'revision';
+
 export interface LessonParameters {
   board: string;
   grade: string;
@@ -20,6 +22,11 @@ export interface LessonParameters {
   selectionType: 'chapter' | 'topic';
   chapter: string;
   subTopic: string;
+  // Session Context
+  cohort: string;
+  semester: string;
+  sessionNumber: number;
+  sessionType: SessionType;
   // Class Readiness
   previousKnowledge: PreviousKnowledgeLevel;
   nextSessionRecommendation: NextSessionRecommendation;
