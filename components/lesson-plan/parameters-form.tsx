@@ -1,6 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+
+// TypeScript declarations for Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -8,7 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { ArrowRight, BookOpen, GraduationCap, Clock, Users, FileText, Lightbulb, BarChart3, Brain, AlertTriangle, Plus, X, CheckCircle2, Target, Lock, Calendar, Hash } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, Clock, Users, FileText, Lightbulb, BarChart3, Brain, AlertTriangle, Plus, X, CheckCircle2, Target, Lock, Calendar, Hash, Mic, Camera, Upload, Paperclip, Image as ImageIcon, ChevronRight, StopCircle } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import type { LessonParameters, PreviousKnowledgeLevel, NextSessionRecommendation, SessionType } from '@/lib/lesson-plan-types';
@@ -392,6 +401,12 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
   const [customRequiredPK, setCustomRequiredPK] = useState<string[]>([]);
   const [customAchievedPK, setCustomAchievedPK] = useState<string[]>([]);
 
+  // State for topic input with attachments
+  const [topicPrompt, setTopicPrompt] = useState('');
+  const [attachedFiles, setAttachedFiles] = useState<{ name: string; type: 'pdf' | 'image'; url?: string }[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+
   // Get available competencies based on current subject and chapter
   const availableCompetencies =
     competenciesMap[formData.subject]?.[formData.chapter] ||
@@ -501,6 +516,109 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
       ...prev,
       achievedCompetencies: prev.achievedCompetencies.filter((c) => c !== competency),
     }));
+  };
+
+  // Handle PDF file upload
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach((file) => {
+        if (file.type === 'application/pdf') {
+          setAttachedFiles((prev) => [...prev, { name: file.name, type: 'pdf' }]);
+        }
+      });
+    }
+    e.target.value = '';
+  };
+
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach((file) => {
+        if (file.type.startsWith('image/')) {
+          const url = URL.createObjectURL(file);
+          setAttachedFiles((prev) => [...prev, { name: file.name, type: 'image', url }]);
+        }
+      });
+    }
+    e.target.value = '';
+  };
+
+  // Handle camera capture
+  const handleCameraCapture = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Create a video element to capture the image
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      await video.play();
+      
+      // Create canvas and capture image
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d')?.drawImage(video, 0, 0);
+      
+      // Stop the stream
+      stream.getTracks().forEach(track => track.stop());
+      
+      // Convert to blob and add to attachments
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          setAttachedFiles((prev) => [...prev, { 
+            name: `captured-${Date.now()}.jpg`, 
+            type: 'image', 
+            url 
+          }]);
+        }
+      }, 'image/jpeg');
+    } catch {
+      alert('Unable to access camera. Please check permissions.');
+    }
+  };
+
+  // Handle voice recording
+  const handleVoiceRecording = async () => {
+    if (isRecording) {
+      setIsRecording(false);
+      return;
+    }
+
+    try {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setTopicPrompt((prev) => prev + ' ' + transcript);
+      };
+
+      recognition.onerror = () => {
+        setIsRecording(false);
+        alert('Voice recognition error. Please try again.');
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognition.start();
+      setIsRecording(true);
+    } catch {
+      alert('Voice recognition is not supported in this browser.');
+    }
+  };
+
+  // Remove attached file
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -653,17 +771,165 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
               </Select>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label htmlFor="topic" className="text-sm font-medium">
-                Enter Topic
+                Enter Topic or Describe Your Lesson
               </Label>
-              <Input
-                id="topic"
-                value={formData.subTopic}
-                onChange={(e) => setFormData({ ...formData, subTopic: e.target.value })}
-                placeholder="e.g., Photosynthesis, Fractions"
-                className="bg-card"
-              />
+              
+              {/* Rich Input Container */}
+              <div className="rounded-lg border border-border bg-card overflow-hidden">
+                {/* Attached Files Preview */}
+                {attachedFiles.length > 0 && (
+                  <div className="p-3 border-b border-border bg-muted/30">
+                    <div className="flex flex-wrap gap-2">
+                      {attachedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 bg-background rounded-md px-3 py-1.5 border border-border"
+                        >
+                          {file.type === 'pdf' ? (
+                            <FileText className="h-4 w-4 text-red-500" />
+                          ) : (
+                            <ImageIcon className="h-4 w-4 text-blue-500" />
+                          )}
+                          <span className="text-sm truncate max-w-32">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(index)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Input Row */}
+                <div className="flex items-center gap-2 p-2">
+                  {/* Plus Button with Dropdown Menu */}
+                  <DropdownMenu open={showAttachMenu} onOpenChange={setShowAttachMenu}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 rounded-full hover:bg-muted"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      <DropdownMenuItem
+                        onClick={() => document.getElementById('pdf-upload')?.click()}
+                        className="cursor-pointer"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload PDF
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => document.getElementById('image-upload')?.click()}
+                        className="cursor-pointer"
+                      >
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Add Photos
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={handleCameraCapture}
+                        className="cursor-pointer"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Capture Image
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Hidden File Inputs */}
+                  <input
+                    type="file"
+                    id="pdf-upload"
+                    accept=".pdf"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                  <input
+                    type="file"
+                    id="image-upload"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+
+                  {/* Text Input */}
+                  <Input
+                    id="topic"
+                    value={topicPrompt}
+                    onChange={(e) => {
+                      setTopicPrompt(e.target.value);
+                      setFormData({ ...formData, subTopic: e.target.value });
+                    }}
+                    placeholder="Ask anything or describe the lesson topic..."
+                    className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
+                  />
+
+                  {/* Voice Recording Button */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleVoiceRecording}
+                    className={`h-9 w-9 shrink-0 rounded-full ${
+                      isRecording 
+                        ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400' 
+                        : 'hover:bg-muted'
+                    }`}
+                    title={isRecording ? 'Stop Recording' : 'Start Voice Input'}
+                  >
+                    {isRecording ? (
+                      <StopCircle className="h-5 w-5" />
+                    ) : (
+                      <Mic className="h-5 w-5" />
+                    )}
+                  </Button>
+
+                  {/* Dictate Button */}
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={handleVoiceRecording}
+                    className={`shrink-0 rounded-full px-3 ${
+                      isRecording 
+                        ? 'bg-red-600 hover:bg-red-700' 
+                        : 'bg-foreground text-background hover:bg-foreground/90'
+                    }`}
+                  >
+                    <Mic className="h-4 w-4 mr-1" />
+                    {isRecording ? 'Stop' : 'Dictate'}
+                  </Button>
+                </div>
+
+                {/* Recording Indicator */}
+                {isRecording && (
+                  <div className="px-4 py-2 border-t border-border bg-red-50 dark:bg-red-950/20">
+                    <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                      </span>
+                      Recording... Speak now
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                You can type, upload PDFs, add images, or use voice to describe your lesson topic.
+              </p>
             </div>
           )}
 
