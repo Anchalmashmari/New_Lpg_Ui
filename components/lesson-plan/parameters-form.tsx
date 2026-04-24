@@ -285,6 +285,8 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
   // State for custom competency input
   const [newRequiredCompetency, setNewRequiredCompetency] = useState('');
   const [newAchievedCompetency, setNewAchievedCompetency] = useState('');
+  const [newCustomCompetency, setNewCustomCompetency] = useState('');
+  const [customCompetencies, setCustomCompetencies] = useState<string[]>([]);
 
   // Get available competencies based on current subject and chapter
   const availableCompetencies =
@@ -339,6 +341,41 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
       achievedCompetencies: prev.achievedCompetencies.filter((_, i) => i !== index),
     }));
   };
+
+  // Add custom competency to missing competencies list
+  const handleAddCustomCompetency = () => {
+    if (newCustomCompetency.trim() && !customCompetencies.includes(newCustomCompetency.trim())) {
+      setCustomCompetencies((prev) => [...prev, newCustomCompetency.trim()]);
+      setNewCustomCompetency('');
+    }
+  };
+
+  // Remove custom competency
+  const handleRemoveCustomCompetency = (competency: string) => {
+    setCustomCompetencies((prev) => prev.filter((c) => c !== competency));
+    setFormData((prev) => ({
+      ...prev,
+      missingCompetencies: prev.missingCompetencies.filter((c) => c !== competency),
+    }));
+  };
+
+  // Combined competencies list (predefined + custom)
+  const allCompetencies = [...availableCompetencies, ...customCompetencies];
+
+  // Example competencies for Required and Achieved
+  const exampleRequiredCompetencies = [
+    'Can identify basic shapes and colors',
+    'Can follow simple instructions',
+    'Can count numbers 1-20',
+    'Can recognize common vocabulary',
+  ];
+
+  const exampleAchievedCompetencies = [
+    'Can read simple sentences',
+    'Can write their name',
+    'Can add single digit numbers',
+    'Can identify living things',
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -561,24 +598,64 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
                   Missing Competencies
                   <span className="text-xs text-muted-foreground font-normal">(Select gaps)</span>
                 </Label>
-                {availableCompetencies.length > 0 ? (
+                
+                {/* Add New Competency Input */}
+                <div className="flex gap-2">
+                  <Input
+                    value={newCustomCompetency}
+                    onChange={(e) => setNewCustomCompetency(e.target.value)}
+                    placeholder="Add new competency..."
+                    className="bg-card flex-1 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomCompetency();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    onClick={handleAddCustomCompetency}
+                    disabled={!newCustomCompetency.trim()}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {allCompetencies.length > 0 ? (
                   <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border border-border bg-card p-3">
-                    {availableCompetencies.map((competency, index) => (
-                      <div key={index} className="flex items-start gap-3">
-                        <Checkbox
-                          id={`competency-${index}`}
-                          checked={formData.missingCompetencies.includes(competency)}
-                          onCheckedChange={() => handleCompetencyToggle(competency)}
-                          className="mt-0.5"
-                        />
-                        <Label
-                          htmlFor={`competency-${index}`}
-                          className="text-sm font-normal cursor-pointer leading-relaxed"
-                        >
-                          {competency}
-                        </Label>
-                      </div>
-                    ))}
+                    {allCompetencies.map((competency, index) => {
+                      const isCustom = customCompetencies.includes(competency);
+                      return (
+                        <div key={index} className="flex items-start gap-3">
+                          <Checkbox
+                            id={`competency-${index}`}
+                            checked={formData.missingCompetencies.includes(competency)}
+                            onCheckedChange={() => handleCompetencyToggle(competency)}
+                            className="mt-0.5"
+                          />
+                          <Label
+                            htmlFor={`competency-${index}`}
+                            className="text-sm font-normal cursor-pointer leading-relaxed flex-1"
+                          >
+                            {competency}
+                          </Label>
+                          {isCustom && (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-5 w-5 shrink-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleRemoveCustomCompetency(competency)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground italic">
@@ -592,104 +669,159 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
                 )}
               </div>
 
-              {/* Right Column: Previous Knowledge (Required & Achieved) */}
-              <div className="space-y-4">
-                {/* Required Competencies */}
-                <div className="space-y-3">
-                  <Label className="flex items-center gap-2 text-sm font-medium">
-                    <Target className="h-4 w-4 text-blue-500" />
-                    Required Competencies
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={newRequiredCompetency}
-                      onChange={(e) => setNewRequiredCompetency(e.target.value)}
-                      placeholder="Add required competency..."
-                      className="bg-card flex-1"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddRequiredCompetency();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      onClick={handleAddRequiredCompetency}
-                      disabled={!newRequiredCompetency.trim()}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {formData.requiredCompetencies.length > 0 && (
-                    <div className="space-y-2 max-h-24 overflow-y-auto rounded-md border border-border bg-card p-2">
-                      {formData.requiredCompetencies.map((comp, index) => (
-                        <div key={index} className="flex items-center justify-between gap-2 text-sm bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
-                          <span className="truncate">{comp}</span>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-5 w-5 shrink-0"
-                            onClick={() => handleRemoveRequiredCompetency(index)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
+              {/* Right Column: Previous Knowledge (Required & Achieved) - Two Column Flex Row */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Previous Knowledge</Label>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* Required Previous Knowledge */}
+                  <div className="flex-1 space-y-3 rounded-md border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 p-3">
+                    <Label className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400">
+                      <Target className="h-4 w-4" />
+                      Required
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newRequiredCompetency}
+                        onChange={(e) => setNewRequiredCompetency(e.target.value)}
+                        placeholder="Add required..."
+                        className="bg-card flex-1 text-sm h-8"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddRequiredCompetency();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8"
+                        onClick={handleAddRequiredCompetency}
+                        disabled={!newRequiredCompetency.trim()}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
                     </div>
-                  )}
-                </div>
+                    
+                    {/* Example Required Competencies */}
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Examples (click to add):</p>
+                      <div className="flex flex-wrap gap-1">
+                        {exampleRequiredCompetencies.map((example, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              if (!formData.requiredCompetencies.includes(example)) {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  requiredCompetencies: [...prev.requiredCompetencies, example],
+                                }));
+                              }
+                            }}
+                            className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                          >
+                            {example}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-                {/* Achieved Competencies */}
-                <div className="space-y-3">
-                  <Label className="flex items-center gap-2 text-sm font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Achieved Competencies
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={newAchievedCompetency}
-                      onChange={(e) => setNewAchievedCompetency(e.target.value)}
-                      placeholder="Add achieved competency..."
-                      className="bg-card flex-1"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddAchievedCompetency();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      onClick={handleAddAchievedCompetency}
-                      disabled={!newAchievedCompetency.trim()}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    {formData.requiredCompetencies.length > 0 && (
+                      <div className="space-y-1 max-h-28 overflow-y-auto">
+                        {formData.requiredCompetencies.map((comp, index) => (
+                          <div key={index} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-blue-950/40 rounded px-2 py-1 border border-blue-200 dark:border-blue-800">
+                            <span className="truncate">{comp}</span>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-4 w-4 shrink-0"
+                              onClick={() => handleRemoveRequiredCompetency(index)}
+                            >
+                              <X className="h-2.5 w-2.5" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {formData.achievedCompetencies.length > 0 && (
-                    <div className="space-y-2 max-h-24 overflow-y-auto rounded-md border border-border bg-card p-2">
-                      {formData.achievedCompetencies.map((comp, index) => (
-                        <div key={index} className="flex items-center justify-between gap-2 text-sm bg-green-50 dark:bg-green-950/30 rounded px-2 py-1">
-                          <span className="truncate">{comp}</span>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-5 w-5 shrink-0"
-                            onClick={() => handleRemoveAchievedCompetency(index)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
+
+                  {/* Achieved Previous Knowledge */}
+                  <div className="flex-1 space-y-3 rounded-md border border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20 p-3">
+                    <Label className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Achieved
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newAchievedCompetency}
+                        onChange={(e) => setNewAchievedCompetency(e.target.value)}
+                        placeholder="Add achieved..."
+                        className="bg-card flex-1 text-sm h-8"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddAchievedCompetency();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8"
+                        onClick={handleAddAchievedCompetency}
+                        disabled={!newAchievedCompetency.trim()}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
                     </div>
-                  )}
+                    
+                    {/* Example Achieved Competencies */}
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Examples (click to add):</p>
+                      <div className="flex flex-wrap gap-1">
+                        {exampleAchievedCompetencies.map((example, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              if (!formData.achievedCompetencies.includes(example)) {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  achievedCompetencies: [...prev.achievedCompetencies, example],
+                                }));
+                              }
+                            }}
+                            className="text-xs px-2 py-0.5 rounded bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                          >
+                            {example}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {formData.achievedCompetencies.length > 0 && (
+                      <div className="space-y-1 max-h-28 overflow-y-auto">
+                        {formData.achievedCompetencies.map((comp, index) => (
+                          <div key={index} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-green-950/40 rounded px-2 py-1 border border-green-200 dark:border-green-800">
+                            <span className="truncate">{comp}</span>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-4 w-4 shrink-0"
+                              onClick={() => handleRemoveAchievedCompetency(index)}
+                            >
+                              <X className="h-2.5 w-2.5" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
