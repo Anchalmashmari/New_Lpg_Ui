@@ -1,5 +1,20 @@
 // Lesson Plan Generator Types
 
+export type PreviousKnowledgeLevel =
+  | 'no-prior-knowledge'
+  | 'limited-familiarity'
+  | 'basic-understanding'
+  | 'moderate-understanding'
+  | 'strong-understanding';
+
+export type NextSessionRecommendation =
+  | 'reteach'
+  | 'reinforce'
+  | 'continue-sequence'
+  | 'enrichment';
+
+export type SessionType = 'regular' | 'remedial' | 'revision';
+
 export interface LessonParameters {
   board: string;
   grade: string;
@@ -7,6 +22,19 @@ export interface LessonParameters {
   selectionType: 'chapter' | 'topic';
   chapter: string;
   subTopic: string;
+  // Session Context
+  cohort: string;
+  semester: string;
+  sessionNumber: number;
+  sessionType: SessionType;
+  // Class Readiness
+  previousKnowledge: PreviousKnowledgeLevel;
+  nextSessionRecommendation: NextSessionRecommendation;
+  previousKnowledgeNotes: string;
+  missingCompetencies: string[];
+  requiredCompetencies: string[];
+  achievedCompetencies: string[];
+  // Duration and other settings
   duration: number;
   classStrength: number;
   includeQuiz: boolean;
