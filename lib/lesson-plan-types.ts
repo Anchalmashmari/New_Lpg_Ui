@@ -18,6 +18,8 @@ export interface LessonParameters {
   previousKnowledge: PreviousKnowledgeLevel;
   previousKnowledgeNotes: string;
   missingCompetencies: string[];
+  requiredCompetencies: string[];
+  achievedCompetencies: string[];
   // Duration and other settings
   duration: number;
   classStrength: number;

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { ArrowRight, BookOpen, GraduationCap, Clock, Users, FileText, Lightbulb, BarChart3, Brain, AlertTriangle } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, Clock, Users, FileText, Lightbulb, BarChart3, Brain, AlertTriangle, CheckCircle2, Target, Plus, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import type { LessonParameters, PreviousKnowledgeLevel } from '@/lib/lesson-plan-types';
@@ -273,12 +273,18 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
     previousKnowledge: 'basic-understanding',
     previousKnowledgeNotes: '',
     missingCompetencies: [],
+    requiredCompetencies: [],
+    achievedCompetencies: [],
     duration: 45,
     classStrength: 30,
     includeQuiz: false,
     includeAssignment: false,
     outputStyle: 'detailed',
   });
+
+  // State for custom competency input
+  const [newRequiredCompetency, setNewRequiredCompetency] = useState('');
+  const [newAchievedCompetency, setNewAchievedCompetency] = useState('');
 
   // Get available competencies based on current subject and chapter
   const availableCompetencies =
@@ -293,6 +299,44 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
       missingCompetencies: prev.missingCompetencies.includes(competency)
         ? prev.missingCompetencies.filter((c) => c !== competency)
         : [...prev.missingCompetencies, competency],
+    }));
+  };
+
+  // Add required competency
+  const handleAddRequiredCompetency = () => {
+    if (newRequiredCompetency.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        requiredCompetencies: [...prev.requiredCompetencies, newRequiredCompetency.trim()],
+      }));
+      setNewRequiredCompetency('');
+    }
+  };
+
+  // Remove required competency
+  const handleRemoveRequiredCompetency = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      requiredCompetencies: prev.requiredCompetencies.filter((_, i) => i !== index),
+    }));
+  };
+
+  // Add achieved competency
+  const handleAddAchievedCompetency = () => {
+    if (newAchievedCompetency.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        achievedCompetencies: [...prev.achievedCompetencies, newAchievedCompetency.trim()],
+      }));
+      setNewAchievedCompetency('');
+    }
+  };
+
+  // Remove achieved competency
+  const handleRemoveAchievedCompetency = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      achievedCompetencies: prev.achievedCompetencies.filter((_, i) => i !== index),
     }));
   };
 
@@ -469,7 +513,7 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
               <span className="font-medium text-base">Class Readiness</span>
             </div>
 
-            {/* Previous Knowledge */}
+            {/* Previous Knowledge Level Dropdown */}
             <div className="space-y-2">
               <Label htmlFor="previousKnowledge" className="text-sm font-medium">
                 Previous Knowledge Level
@@ -508,42 +552,146 @@ export function ParametersForm({ onSubmit }: ParametersFormProps) {
               />
             </div>
 
-            {/* Missing Competencies */}
-            <div className="space-y-3">
-              <Label className="flex items-center gap-2 text-sm font-medium">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                Missing Competencies
-                <span className="text-xs text-muted-foreground font-normal">(Select gaps observed)</span>
-              </Label>
-              {availableCompetencies.length > 0 ? (
-                <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border border-border bg-card p-3">
-                  {availableCompetencies.map((competency, index) => (
-                    <div key={index} className="flex items-start gap-3">
-                      <Checkbox
-                        id={`competency-${index}`}
-                        checked={formData.missingCompetencies.includes(competency)}
-                        onCheckedChange={() => handleCompetencyToggle(competency)}
-                        className="mt-0.5"
-                      />
-                      <Label
-                        htmlFor={`competency-${index}`}
-                        className="text-sm font-normal cursor-pointer leading-relaxed"
-                      >
-                        {competency}
-                      </Label>
+            {/* Two Column Layout: Missing Competencies & Previous Knowledge (Required/Achieved) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Left Column: Missing Competencies */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  Missing Competencies
+                  <span className="text-xs text-muted-foreground font-normal">(Select gaps)</span>
+                </Label>
+                {availableCompetencies.length > 0 ? (
+                  <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border border-border bg-card p-3">
+                    {availableCompetencies.map((competency, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <Checkbox
+                          id={`competency-${index}`}
+                          checked={formData.missingCompetencies.includes(competency)}
+                          onCheckedChange={() => handleCompetencyToggle(competency)}
+                          className="mt-0.5"
+                        />
+                        <Label
+                          htmlFor={`competency-${index}`}
+                          className="text-sm font-normal cursor-pointer leading-relaxed"
+                        >
+                          {competency}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">
+                    Select a subject and chapter to see available competencies.
+                  </p>
+                )}
+                {formData.missingCompetencies.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {formData.missingCompetencies.length} competenc{formData.missingCompetencies.length === 1 ? 'y' : 'ies'} selected
+                  </p>
+                )}
+              </div>
+
+              {/* Right Column: Previous Knowledge (Required & Achieved) */}
+              <div className="space-y-4">
+                {/* Required Competencies */}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    <Target className="h-4 w-4 text-blue-500" />
+                    Required Competencies
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newRequiredCompetency}
+                      onChange={(e) => setNewRequiredCompetency(e.target.value)}
+                      placeholder="Add required competency..."
+                      className="bg-card flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddRequiredCompetency();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      onClick={handleAddRequiredCompetency}
+                      disabled={!newRequiredCompetency.trim()}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {formData.requiredCompetencies.length > 0 && (
+                    <div className="space-y-2 max-h-24 overflow-y-auto rounded-md border border-border bg-card p-2">
+                      {formData.requiredCompetencies.map((comp, index) => (
+                        <div key={index} className="flex items-center justify-between gap-2 text-sm bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
+                          <span className="truncate">{comp}</span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-5 w-5 shrink-0"
+                            onClick={() => handleRemoveRequiredCompetency(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  Select a subject and chapter to see available competencies.
-                </p>
-              )}
-              {formData.missingCompetencies.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {formData.missingCompetencies.length} competenc{formData.missingCompetencies.length === 1 ? 'y' : 'ies'} selected
-                </p>
-              )}
+
+                {/* Achieved Competencies */}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    Achieved Competencies
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newAchievedCompetency}
+                      onChange={(e) => setNewAchievedCompetency(e.target.value)}
+                      placeholder="Add achieved competency..."
+                      className="bg-card flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddAchievedCompetency();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      onClick={handleAddAchievedCompetency}
+                      disabled={!newAchievedCompetency.trim()}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {formData.achievedCompetencies.length > 0 && (
+                    <div className="space-y-2 max-h-24 overflow-y-auto rounded-md border border-border bg-card p-2">
+                      {formData.achievedCompetencies.map((comp, index) => (
+                        <div key={index} className="flex items-center justify-between gap-2 text-sm bg-green-50 dark:bg-green-950/30 rounded px-2 py-1">
+                          <span className="truncate">{comp}</span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-5 w-5 shrink-0"
+                            onClick={() => handleRemoveAchievedCompetency(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
