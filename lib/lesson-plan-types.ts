@@ -7,6 +7,12 @@ export type PreviousKnowledgeLevel =
   | 'moderate-understanding'
   | 'strong-understanding';
 
+export type NextSessionRecommendation =
+  | 'reteach'
+  | 'reinforce'
+  | 'continue-sequence'
+  | 'enrichment';
+
 export interface LessonParameters {
   board: string;
   grade: string;
@@ -16,6 +22,7 @@ export interface LessonParameters {
   subTopic: string;
   // Class Readiness
   previousKnowledge: PreviousKnowledgeLevel;
+  nextSessionRecommendation: NextSessionRecommendation;
   previousKnowledgeNotes: string;
   missingCompetencies: string[];
   requiredCompetencies: string[];

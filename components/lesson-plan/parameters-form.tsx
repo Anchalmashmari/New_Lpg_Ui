@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { ArrowRight, BookOpen, GraduationCap, Clock, Users, FileText, Lightbulb, BarChart3, Brain, AlertTriangle, Plus, X, CheckCircle2, Target, Lock } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import type { LessonParameters, PreviousKnowledgeLevel } from '@/lib/lesson-plan-types';
+import type { LessonParameters, PreviousKnowledgeLevel, NextSessionRecommendation } from '@/lib/lesson-plan-types';
 
 // Teacher proficiency levels for RBAC control
 type TeacherProficiency = 'beginner' | 'intermediate' | 'advanced' | 'expert';
@@ -38,6 +38,13 @@ const previousKnowledgeLevels: { value: PreviousKnowledgeLevel; label: string }[
   { value: 'basic-understanding', label: 'Basic understanding' },
   { value: 'moderate-understanding', label: 'Moderate understanding' },
   { value: 'strong-understanding', label: 'Strong understanding' },
+];
+
+const nextSessionRecommendations: { value: NextSessionRecommendation; label: string }[] = [
+  { value: 'reteach', label: 'Reteach' },
+  { value: 'reinforce', label: 'Reinforce' },
+  { value: 'continue-sequence', label: 'Continue Sequence' },
+  { value: 'enrichment', label: 'Enrichment' },
 ];
 
 // Required Previous Knowledge competencies (recommendations based on subject/chapter)
@@ -328,6 +335,7 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
     chapter: '2',
     subTopic: '',
     previousKnowledge: 'basic-understanding',
+    nextSessionRecommendation: 'continue-sequence',
     previousKnowledgeNotes: '',
     missingCompetencies: [],
     requiredCompetencies: [],
@@ -799,34 +807,64 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
                 </div>
               </div>
 
-              {/* Right: Previous Knowledge Level Dropdown */}
+              {/* Right: Instructor Assessment & Recommendation Dropdowns */}
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="previousKnowledge" className="text-sm font-medium">
-                    Knowledge Level
-                  </Label>
-                  <Select
-                    value={formData.previousKnowledge}
-                    onValueChange={(value: PreviousKnowledgeLevel) =>
-                      setFormData({ ...formData, previousKnowledge: value })
-                    }
-                  >
-                    <SelectTrigger id="previousKnowledge" className="bg-card">
-                      <SelectValue placeholder="Select level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {previousKnowledgeLevels.map((level) => (
-                        <SelectItem key={level.value} value={level.value}>
-                          {level.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <Label className="text-sm font-medium">Instructor Assessment of Overall Previous Knowledge Competency</Label>
+                
+                {/* Flex row with two dropdowns */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {/* Knowledge Level Dropdown */}
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="previousKnowledge" className="text-xs text-muted-foreground">
+                      Knowledge Level
+                    </Label>
+                    <Select
+                      value={formData.previousKnowledge}
+                      onValueChange={(value: PreviousKnowledgeLevel) =>
+                        setFormData({ ...formData, previousKnowledge: value })
+                      }
+                    >
+                      <SelectTrigger id="previousKnowledge" className="bg-card">
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {previousKnowledgeLevels.map((level) => (
+                          <SelectItem key={level.value} value={level.value}>
+                            {level.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Next Session Recommendation Dropdown */}
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="nextSessionRecommendation" className="text-xs text-muted-foreground">
+                      Next-Session Recommendation
+                    </Label>
+                    <Select
+                      value={formData.nextSessionRecommendation}
+                      onValueChange={(value: NextSessionRecommendation) =>
+                        setFormData({ ...formData, nextSessionRecommendation: value })
+                      }
+                    >
+                      <SelectTrigger id="nextSessionRecommendation" className="bg-card">
+                        <SelectValue placeholder="Select recommendation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {nextSessionRecommendations.map((rec) => (
+                          <SelectItem key={rec.value} value={rec.value}>
+                            {rec.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Previous Knowledge Notes */}
                 <div className="space-y-2">
-                  <Label htmlFor="previousKnowledgeNotes" className="text-sm font-medium text-muted-foreground">
+                  <Label htmlFor="previousKnowledgeNotes" className="text-xs text-muted-foreground">
                     Notes (Optional)
                   </Label>
                   <Textarea
@@ -835,7 +873,7 @@ export function ParametersForm({ onSubmit, teacherProficiency = 'intermediate' }
                     onChange={(e) => setFormData({ ...formData, previousKnowledgeNotes: e.target.value })}
                     placeholder="Observations about readiness..."
                     className="bg-card resize-none text-sm"
-                    rows={3}
+                    rows={2}
                   />
                 </div>
               </div>
